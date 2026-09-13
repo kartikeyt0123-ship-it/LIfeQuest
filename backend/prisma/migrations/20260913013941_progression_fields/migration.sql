@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Profile" ADD COLUMN     "discipline" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "focus" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "intelligence" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "lastActivityDate" TIMESTAMP(3),
+ADD COLUMN     "strength" INTEGER NOT NULL DEFAULT 0;

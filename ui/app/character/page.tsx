@@ -18,7 +18,7 @@ import { StatList } from '@/components/stat-list'
 import { XpBar } from '@/components/xp-bar'
 import { AnimatedNumber } from '@/components/animated-number'
 
-const milestones = [
+const fallbackMilestones = [
   {
     level: 13,
     rank: 'Legend',
@@ -40,8 +40,17 @@ const milestones = [
 ]
 
 export default function CharacterPage() {
-  const { level, xp, xpToNext, gold, streak, stats, quests, achievements } =
+  const { level, xp, xpToNext, gold, streak, stats, quests, achievements, lifeCards } =
     useGame()
+
+  const milestones = lifeCards.length
+    ? lifeCards.map((card) => ({
+        level: card.levelRequired,
+        rank: card.name,
+        cardName: card.name,
+        description: card.description,
+      }))
+    : fallbackMilestones
 
   const questsDone = quests.filter((q) => q.completed).length
   const achievementsDone = achievements.filter((a) => a.unlocked).length

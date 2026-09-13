@@ -44,6 +44,9 @@ type Player = {
   xp: number
   xpToNext: number
   gold: number
+  streak?: number
+  bestStreak?: number
+  totalXp?: number
 }
 
 type NewQuestInput = {
@@ -55,12 +58,19 @@ type NewQuestInput = {
   gold: number
 }
 
+type QuestEditInput = Partial<Pick<Quest, 'title' | 'description' | 'category' | 'difficulty'>>
+
 type ApiState = {
   player?: Player
   quests?: Quest[]
   habits?: Habit[]
+  stats?: Array<{ name: string; value: number }>
+  achievements?: Array<{ id: string; title: string; description: string; unlocked: boolean; progress: number; goal: number }>
+  lifeCards?: Array<{ id: string; levelRequired: number; name: string; description: string; unlocked: boolean }>
   levelUp?: LevelUpInfo | null
 }
+
+type LifeCard = { id: string; levelRequired: number; name: string; description: string; unlocked: boolean }
 
 export type Account = { id: string; email: string; name: string }
 
@@ -81,10 +91,13 @@ type GameContextValue = {
   rewards: Reward[]
   redeemingRewardId: string | null
   stats: Stat[]
+  lifeCards: LifeCard[]
   toasts: Toast[]
   levelUp: LevelUpInfo | null
   completeQuest: (id: string) => void
   addQuest: (input: NewQuestInput) => void
+  updateQuest: (id: string, input: QuestEditInput) => void
+  deleteQuest: (id: string) => void
   redeemReward: (reward: Reward) => void
   toggleHabitToday: (id: string) => void
   dismissToast: (id: number) => void
@@ -104,12 +117,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     xpToNext: 3000,
     gold: 1840,
   })
-  const [streak] = useState(12)
-
   const [quests, setQuests] = useState<Quest[]>(initialQuests)
   const [habits, setHabits] = useState<Habit[]>(initialHabits)
-  const [achievements] = useState<Achievement[]>(initialAchievements)
-  const [stats] = useState<Stat[]>(initialStats)
+  const [achievements, setAchievements] = useState<Achievement[]>(initialAchievements)
+  const [stats, setStats] = useState<Stat[]>(initialStats)
+  const [lifeCards, setLifeCards] = useState<LifeCard[]>([])
   const [rewards, setRewards] = useState<Reward[]>(rewardCatalog)
   const [redeemingRewardId, setRedeemingRewardId] = useState<string | null>(null)
 
@@ -122,9 +134,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (next.habits) setHabits((previous) =>
       next.habits!.map((habit) => ({
         ...habit,
-        icon: previous.find((item) => item.id === habit.id)?.icon ?? habit.icon,
+        icon: previous.find((item) => item.id === habit.id)?.icon
+          ?? initialHabits.find((item) => item.name === habit.name)?.icon
+          ?? initialHabits[0].icon,
       })),
     )
+    if (next.achievements) setAchievements((previous) => next.achievements!.map((achievement) => ({
+      ...achievement,
+      icon: previous.find((item) => item.title === achievement.title)?.icon ?? initialAchievements[0].icon,
+    })))
+    if (next.stats) setStats((previous) => next.stats!.map((stat) => ({
+      ...stat,
+      icon: previous.find((item) => item.name === stat.name)?.icon ?? initialStats[0].icon,
+      accent: previous.find((item) => item.name === stat.name)?.accent ?? 'var(--violet)',
+    })))
+    if (next.lifeCards) setLifeCards(next.lifeCards)
   }, [])
 
   const requestState = useCallback(async (path: string, options?: RequestInit) => {
@@ -188,8 +212,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         gold: payload.profile.gold,
       }))
     }
+    await requestState('/state')
     await loadRewards()
-  }, [applyApiState, loadRewards])
+  }, [applyApiState, loadRewards, requestState])
 
   const signUp = useCallback((email: string, password: string, name?: string) => authenticate('/auth/register', email, password, name), [authenticate])
   const signIn = useCallback((email: string, password: string) => authenticate('/auth/login', email, password), [authenticate])
@@ -225,6 +250,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
     requestState('/quests', { method: 'POST', body: JSON.stringify(input) })
       .then(() => pushToast({ title: 'New Quest Added', description: `${input.title} is ready to conquer`, tone: 'xp' }))
       .catch((error: Error) => pushToast({ title: 'Could not add quest', description: error.message, tone: 'error' }))
+  }, [requestState, pushToast])
+
+  const updateQuest = useCallback((id: string, input: QuestEditInput) => {
+    requestState(`/quests/${id}`, { method: 'PUT', body: JSON.stringify(input) })
+      .then(() => pushToast({ title: 'Quest updated', description: 'Your quest changes were saved.', tone: 'success' }))
+      .catch((error: Error) => pushToast({ title: 'Could not update quest', description: error.message, tone: 'error' }))
+  }, [requestState, pushToast])
+
+  const deleteQuest = useCallback((id: string) => {
+    requestState(`/quests/${id}`, { method: 'DELETE' })
+      .then(() => pushToast({ title: 'Quest deleted', tone: 'success' }))
+      .catch((error: Error) => pushToast({ title: 'Could not delete quest', description: error.message, tone: 'error' }))
   }, [requestState, pushToast])
 
   const redeemReward = useCallback(
@@ -271,17 +308,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
       xp: player.xp,
       xpToNext: player.xpToNext,
       gold: player.gold,
-      streak,
+      streak: player.streak ?? 0,
       quests,
       habits,
       achievements,
       rewards,
       redeemingRewardId,
       stats,
+      lifeCards,
       toasts,
       levelUp,
       completeQuest,
       addQuest,
+      updateQuest,
+      deleteQuest,
       redeemReward,
       toggleHabitToday,
       dismissToast,
@@ -291,18 +331,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
       account,
       authLoading,
       player,
-      streak,
       quests,
       habits,
       achievements,
       rewards,
       redeemingRewardId,
-      rewards,
       stats,
+      lifeCards,
       toasts,
       levelUp,
       completeQuest,
       addQuest,
+      updateQuest,
+      deleteQuest,
       redeemReward,
       toggleHabitToday,
       dismissToast,

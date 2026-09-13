@@ -37,6 +37,11 @@ model Profile {
   gold          Int      @default(0)
   currentStreak Int      @default(0)
   bestStreak    Int      @default(0)
+  lastActivityDate DateTime?
+  strength      Int      @default(0)
+  intelligence  Int      @default(0)
+  focus         Int      @default(0)
+  discipline    Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

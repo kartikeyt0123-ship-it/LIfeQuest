@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { prisma } from '../config/prisma.js'
 import { AppError } from '../utils/errors.js'
+import { ensureReferenceData } from './progressionService.js'
 
 export async function registerUser(name: string, email: string, password: string) {
   const trimmedName = name.trim()
@@ -44,6 +45,24 @@ export async function registerUser(name: string, email: string, password: string
       profile: true,
     },
   })
+
+  await prisma.habit.createMany({
+    data: [
+      ['Workout', 'FITNESS', 40, 12],
+      ['Read', 'STUDY', 30, 8],
+      ['Coding', 'CODING', 35, 21],
+      ['Meditation', 'DISCIPLINE', 25, 5],
+    ].map(([habitName, category, goldReward, currentStreak]) => ({
+      userId: user.id,
+      name: habitName as string,
+      category: category as 'FITNESS',
+      xpReward: 50,
+      goldReward: goldReward as number,
+      currentStreak: currentStreak as number,
+      bestStreak: currentStreak as number,
+    })),
+  })
+  await ensureReferenceData()
 
   return buildAuthPayload(user)
 }

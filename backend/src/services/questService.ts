@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma.js'
 import { AppError } from '../utils/errors.js'
 import { getLevelFromXp } from '../utils/level.js'
 import type { Prisma } from '@prisma/client'
+import { checkAchievements, ensureReferenceData, getActivityStreak, unlockProgressionRewards } from './progressionService.js'
 
 const CATEGORY_MAP = {
   study: 'STUDY',
@@ -68,8 +69,8 @@ export async function updateQuest(userId: string, questId: string, input: Partia
     data: {
       title: input.title?.trim() || quest.title,
       description: input.description?.trim() || quest.description,
-      category: CATEGORY_MAP[(input.category as keyof typeof CATEGORY_MAP) ?? 'work'] ?? quest.category,
-      difficulty: DIFFICULTY_MAP[(input.difficulty as keyof typeof DIFFICULTY_MAP) ?? 'easy'] ?? quest.difficulty,
+      category: input.category ? CATEGORY_MAP[input.category as keyof typeof CATEGORY_MAP] ?? quest.category : quest.category,
+      difficulty: input.difficulty ? DIFFICULTY_MAP[input.difficulty as keyof typeof DIFFICULTY_MAP] ?? quest.difficulty : quest.difficulty,
       xpReward: Number(input.xpReward) || quest.xpReward,
       goldReward: Number(input.goldReward) || quest.goldReward,
     },
@@ -93,6 +94,16 @@ export async function completeQuest(userId: string, questId: string) {
 
   const previousLevel = profile.level
   const nextLevel = getLevelFromXp(profile.totalXp + quest.xpReward)
+  await ensureReferenceData()
+  const activityDate = new Date()
+  activityDate.setUTCHours(0, 0, 0, 0)
+  const nextStreak = getActivityStreak(profile.lastActivityDate, profile.currentStreak, activityDate)
+  const attributeField = ({
+    FITNESS: 'strength',
+    STUDY: 'intelligence',
+    CODING: 'focus',
+    CREATIVE: 'focus',
+  } as Record<string, string>)[quest.category] ?? 'discipline'
 
   const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const completion = await tx.questCompletion.create({
@@ -110,6 +121,10 @@ export async function completeQuest(userId: string, questId: string) {
         totalXp: { increment: quest.xpReward },
         gold: { increment: quest.goldReward },
         level: nextLevel,
+        currentStreak: nextStreak,
+        bestStreak: Math.max(profile.bestStreak, nextStreak),
+        lastActivityDate: activityDate,
+        [attributeField]: { increment: 1 },
       },
     })
 
@@ -133,6 +148,14 @@ export async function completeQuest(userId: string, questId: string) {
         referenceId: completion.id,
       },
     })
+
+    await tx.dailyStat.upsert({
+      where: { userId_date: { userId, date: activityDate } },
+      create: { userId, date: activityDate, questsDone: 1, xpEarned: quest.xpReward, goldEarned: quest.goldReward },
+      update: { questsDone: { increment: 1 }, xpEarned: { increment: quest.xpReward }, goldEarned: { increment: quest.goldReward } },
+    })
+    await checkAchievements(tx, userId)
+    await unlockProgressionRewards(tx, userId, nextLevel)
 
     return { completion, levelUp: nextLevel > previousLevel ? { from: previousLevel, to: nextLevel, goldBonus: 0 } : null }
   })

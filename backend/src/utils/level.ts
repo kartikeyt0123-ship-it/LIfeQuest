@@ -22,7 +22,7 @@ export function getXpForNextLevel(level: number) {
 export function getLevelSummary(totalXp: number) {
   const level = getLevelFromXp(totalXp)
   const currentLevelStart = LEVEL_THRESHOLDS[Math.max(level - 2, 0)] ?? 0
-  const nextLevelStart = LEVEL_THRESHOLDS[Math.min(level - 1, LEVEL_THRESHOLDS.length - 1)] ?? 0
+  const nextLevelStart = LEVEL_THRESHOLDS[Math.min(level, LEVEL_THRESHOLDS.length - 1)] ?? currentLevelStart
   const xpForCurrentLevel = Math.max(totalXp - currentLevelStart, 0)
   const xpForNextLevel = Math.max(nextLevelStart - currentLevelStart, 0)
   const progress = xpForNextLevel > 0 ? (xpForCurrentLevel / xpForNextLevel) * 100 : 100
