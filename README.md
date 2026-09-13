@@ -170,19 +170,17 @@ vercel --prod
 
 Open the Vercel URL, create an account, complete a quest. If sign-up shows *"Server error … Make sure the API is running"*, check `NEXT_PUBLIC_API_URL` (must end in `/api`) and that `FRONTEND_URL` on the backend matches the Vercel origin.
 
-### Alternative: hosting the backend on Vercel too
+### Alternative: hosting the backend on Vercel too (already wired up)
 
-The Express app can run as a Vercel serverless function, with a few caveats: cold starts, a 10 s (Hobby) execution limit, and the in-memory logout token blacklist won't persist across invocations. If you still prefer a single provider:
+`backend/` ships with `api/index.ts` and `vercel.json`, so the Express API can run as a Vercel serverless function and the entire app can live on one Vercel account:
 
-1. Create `backend/api/index.ts` that imports the Express `app` and exports it as the default handler (this requires splitting `app.listen(...)` out of `src/server.ts` into a separate entry so the app can be imported without listening).
-2. Add `backend/vercel.json`:
-   ```json
-   { "rewrites": [{ "source": "/(.*)", "destination": "/api" }] }
-   ```
-3. Deploy `backend/` as a **second Vercel project** (Root Directory `backend`, Build command `npx prisma generate`), with `DATABASE_URL`, `JWT_SECRET`, and `FRONTEND_URL` set.
-4. Point the frontend's `NEXT_PUBLIC_API_URL` at `https://<backend-project>.vercel.app/api`.
+1. **Storage → Create Database → Neon (Postgres)** in your Vercel dashboard, or create one at neon.tech. Copy the *pooled* connection string.
+2. Run migrations once from your machine: `DATABASE_URL="<connection string>" npx prisma migrate deploy` (in `backend/`).
+3. **Add New → Project** → import the repo → Root Directory **`backend`** → env vars `DATABASE_URL`, `JWT_SECRET`, `FRONTEND_URL` → Deploy. Note the URL (e.g. `https://lifequest-api.vercel.app`); `/api/health` should return `{"ok":true}`.
+4. **Add New → Project** again → same repo → Root Directory **`frontend`** → env var `NEXT_PUBLIC_API_URL=https://lifequest-api.vercel.app/api` → Deploy.
+5. Set `FRONTEND_URL` on the backend project to the frontend URL and redeploy it.
 
-Use a pooled connection string (Neon's `-pooler` host or Prisma Accelerate) in serverless environments so Prisma doesn't exhaust database connections.
+Caveats of serverless: cold starts, a 10 s execution limit on the Hobby plan, and the in-memory logout token blacklist does not persist between invocations (tokens still expire after 30 days).
 
 ## Notes
 
