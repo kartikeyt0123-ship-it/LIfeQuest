@@ -216,7 +216,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     await loadRewards()
   }, [applyApiState, loadRewards, requestState])
 
-  const signUp = useCallback((email: string, password: string, name?: string) => authenticate('/auth/register', email, password, name), [authenticate])
+  const signUp = useCallback((email: string, password: string, name?: string) => authenticate('/auth/signup', email, password, name), [authenticate])
   const signIn = useCallback((email: string, password: string) => authenticate('/auth/login', email, password), [authenticate])
   const signOut = useCallback(async () => {
     const token = localStorage.getItem('lifequest-token')
