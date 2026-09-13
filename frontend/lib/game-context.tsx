@@ -26,6 +26,21 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'
 
+// Parse a JSON response, turning non-JSON replies (HTML 404/500 pages, empty bodies)
+// into a readable error instead of a raw "Unexpected token <" crash.
+async function readJson(response: Response) {
+  const text = await response.text()
+  try {
+    return text ? JSON.parse(text) : {}
+  } catch {
+    throw new Error(
+      response.ok
+        ? 'The server returned an unexpected response.'
+        : `Server error (${response.status}). Make sure the API is running at ${API_BASE}.`,
+    )
+  }
+}
+
 export type Toast = {
   id: number
   title: string
@@ -157,7 +172,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       ...options,
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options?.headers },
     })
-    const payload = await response.json()
+    const payload = await readJson(response)
     if (!response.ok) throw new Error(payload.message || payload.error || 'Something went wrong. Please try again.')
     applyApiState(payload)
     return payload as ApiState
@@ -168,7 +183,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const response = await fetch(`${API_BASE}/rewards`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
-    const payload = await response.json()
+    const payload = await readJson(response)
     if (!response.ok) throw new Error(payload.message || 'Something went wrong. Please try again.')
     const nextRewards = payload.flatMap((reward: { id: string; name: string; description: string; goldCost: number }) => {
       const catalogReward = rewardCatalog.find((item) => item.name === reward.name)
@@ -198,7 +213,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, name }),
     })
-    const payload = await response.json()
+    const payload = await readJson(response)
     if (!response.ok) throw new Error(payload.message || payload.error || 'Authentication failed')
     localStorage.setItem('lifequest-token', payload.token)
     localStorage.setItem('lifequest-account', JSON.stringify(payload.user))

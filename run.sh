@@ -3,11 +3,12 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
-UI_DIR="$ROOT_DIR/ui"
+UI_DIR="$ROOT_DIR/frontend"
 
 cleanup() {
   trap - SIGINT SIGTERM EXIT
   [[ -n "${BACKEND_PID:-}" ]] && kill "$BACKEND_PID" 2>/dev/null || true
+  [[ -n "${DB_PID:-}" ]] && kill "$DB_PID" 2>/dev/null || true
   [[ -n "${UI_PID:-}" ]] && kill "$UI_PID" 2>/dev/null || true
 }
 trap cleanup SIGINT SIGTERM EXIT
@@ -18,9 +19,21 @@ if ! command -v npm >/dev/null 2>&1; then
 fi
 
 if [[ ! -d "$BACKEND_DIR" || ! -d "$UI_DIR" ]]; then
-  echo "Error: expected backend/ and ui/ directories under $ROOT_DIR."
+  echo "Error: expected backend/ and frontend/ directories under $ROOT_DIR."
   exit 1
 fi
+
+echo "Starting local PostgreSQL on localhost:5432..."
+(
+  cd "$BACKEND_DIR"
+  npm run db
+) &
+DB_PID=$!
+sleep 8
+(
+  cd "$BACKEND_DIR"
+  npx prisma migrate deploy >/dev/null
+)
 
 echo "Starting LifeQuest backend on http://localhost:4000..."
 (

@@ -6,3 +6,4 @@ backend/.env
 backend/dist
 npm-debug.log*
 .DS_Store
+backend/.pgdata

@@ -4,7 +4,8 @@ import { requireAuth } from '../middleware/auth.js'
 
 const router = Router()
 
-router.post('/register', async (req, res) => {
+// The frontend calls /signup; keep /register as an alias.
+router.post(['/signup', '/register'], async (req, res) => {
   try {
     const { name, email, password } = req.body ?? {}
     const payload = await registerUser(String(name ?? ''), String(email ?? ''), String(password ?? ''))
