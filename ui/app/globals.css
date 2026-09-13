@@ -1,0 +1,174 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-violet: var(--violet);
+  --color-electric: var(--electric);
+  --color-gold: var(--gold);
+  --color-success: var(--success);
+  --color-surface: var(--surface);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+}
+
+:root {
+  color-scheme: dark;
+  --radius: 0.9rem;
+
+  --background: oklch(0.15 0.025 275);
+  --foreground: oklch(0.96 0.008 280);
+
+  --surface: oklch(0.21 0.03 278);
+  --card: oklch(0.21 0.03 278);
+  --card-foreground: oklch(0.96 0.008 280);
+  --popover: oklch(0.19 0.028 278);
+  --popover-foreground: oklch(0.96 0.008 280);
+
+  --primary: oklch(0.62 0.24 300);
+  --primary-foreground: oklch(0.98 0.01 300);
+  --secondary: oklch(0.68 0.17 248);
+  --secondary-foreground: oklch(0.15 0.02 275);
+
+  --muted: oklch(0.28 0.03 278);
+  --muted-foreground: oklch(0.72 0.03 278);
+  --accent: oklch(0.3 0.05 290);
+  --accent-foreground: oklch(0.96 0.008 280);
+  --destructive: oklch(0.64 0.22 20);
+
+  --violet: oklch(0.62 0.24 300);
+  --electric: oklch(0.7 0.17 245);
+  --gold: oklch(0.82 0.15 82);
+  --success: oklch(0.74 0.17 152);
+
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.62 0.24 300);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply bg-background;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image:
+      radial-gradient(
+        60rem 40rem at 85% -10%,
+        oklch(0.62 0.24 300 / 0.18),
+        transparent 70%
+      ),
+      radial-gradient(
+        50rem 40rem at 0% 20%,
+        oklch(0.7 0.17 245 / 0.12),
+        transparent 70%
+      );
+    background-attachment: fixed;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(1 0 0 / 0.1);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(1 0 0 / 0.18);
+    background-clip: padding-box;
+  }
+}
+
+@layer components {
+  .glass {
+    background: linear-gradient(
+      160deg,
+      oklch(1 0 0 / 0.06),
+      oklch(1 0 0 / 0.02)
+    );
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid oklch(1 0 0 / 0.08);
+    box-shadow:
+      0 1px 0 0 oklch(1 0 0 / 0.05) inset,
+      0 24px 60px -30px oklch(0 0 0 / 0.7);
+  }
+  .glass-strong {
+    background: linear-gradient(
+      160deg,
+      oklch(1 0 0 / 0.09),
+      oklch(1 0 0 / 0.03)
+    );
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid oklch(1 0 0 / 0.1);
+    box-shadow:
+      0 1px 0 0 oklch(1 0 0 / 0.06) inset,
+      0 40px 80px -40px oklch(0 0 0 / 0.8);
+  }
+  .text-gradient {
+    background: linear-gradient(
+      100deg,
+      var(--foreground),
+      oklch(0.78 0.12 300)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+@keyframes float-up {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.9);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-52px) scale(1);
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

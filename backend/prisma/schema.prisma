@@ -1,0 +1,259 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile       Profile?
+  quests        Quest[]
+  questCompletions QuestCompletion[]
+  habits        Habit[]
+  habitCompletions HabitCompletion[]
+  rewardPurchases RewardPurchase[]
+  userAchievements UserAchievement[]
+  xpTransactions XpTransaction[]
+  goldTransactions GoldTransaction[]
+  userLifeCards UserLifeCard[]
+  dailyStats    DailyStat[]
+}
+
+model Profile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level         Int      @default(1)
+  totalXp       Int      @default(0)
+  gold          Int      @default(0)
+  currentStreak Int      @default(0)
+  bestStreak    Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Quest {
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  description      String
+  category         QuestCategory
+  difficulty       QuestDifficulty
+  xpReward         Int
+  goldReward       Int
+  estimatedMinutes Int?
+  dueDate          DateTime?
+  repeatType       QuestRepeatType   @default(ONCE)
+  isCompleted      Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  completions      QuestCompletion[]
+}
+
+enum QuestCategory {
+  STUDY
+  FITNESS
+  CODING
+  CREATIVE
+  PERSONAL_GROWTH
+  CHORES
+  WORK
+  HEALTH
+  CUSTOM
+}
+
+enum QuestDifficulty {
+  EASY
+  MEDIUM
+  HARD
+  EPIC
+}
+
+enum QuestRepeatType {
+  ONCE
+  DAILY
+  WEEKLY
+}
+
+model QuestCompletion {
+  id          String   @id @default(cuid())
+  questId     String
+  userId      String
+  completedAt DateTime @default(now())
+  xpEarned    Int
+  goldEarned  Int
+
+  quest       Quest     @relation(fields: [questId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([questId, userId])
+}
+
+model Habit {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  category      HabitCategory
+  xpReward      Int
+  goldReward    Int
+  currentStreak Int       @default(0)
+  bestStreak    Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  completions   HabitCompletion[]
+}
+
+enum HabitCategory {
+  FITNESS
+  STUDY
+  CODING
+  CREATIVE
+  DISCIPLINE
+  HEALTH
+  PERSONAL_GROWTH
+}
+
+model HabitCompletion {
+  id          String   @id @default(cuid())
+  habitId     String
+  userId      String
+  completedAt DateTime @default(now())
+  xpEarned    Int
+  goldEarned  Int
+
+  habit       Habit     @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, userId, completedAt])
+}
+
+model Reward {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  goldCost    Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  purchases   RewardPurchase[]
+}
+
+model RewardPurchase {
+  id        String   @id @default(cuid())
+  userId    String
+  rewardId  String
+  goldSpent Int
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward    Reward   @relation(fields: [rewardId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, rewardId, createdAt])
+}
+
+model Achievement {
+  id              String   @id @default(cuid())
+  name            String
+  description     String
+  icon            String
+  requirementType String
+  requirementValue Int
+  createdAt       DateTime @default(now())
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id          String   @id @default(cuid())
+  userId      String
+  achievementId String
+  unlockedAt  DateTime @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, achievementId])
+}
+
+model XpTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  source    String
+  referenceId String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GoldTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  type      GoldTransactionType
+  source    String
+  referenceId String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum GoldTransactionType {
+  EARN
+  SPEND
+}
+
+model LifeCard {
+  id            String   @id @default(cuid())
+  levelRequired Int
+  name          String
+  description   String
+  image         String?
+  createdAt     DateTime @default(now())
+
+  userLifeCards UserLifeCard[]
+}
+
+model UserLifeCard {
+  id         String   @id @default(cuid())
+  userId     String
+  lifeCardId String
+  unlockedAt DateTime @default(now())
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lifeCard   LifeCard  @relation(fields: [lifeCardId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, lifeCardId])
+}
+
+model DailyStat {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime
+  questsDone  Int      @default(0)
+  habitsDone  Int      @default(0)
+  xpEarned    Int      @default(0)
+  goldEarned  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
