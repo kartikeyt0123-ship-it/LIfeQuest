@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export default function ShopPage() {
-  const { rewards, gold, redeemReward } = useGame()
+  const { rewards, gold, redeemReward, redeemingRewardId } = useGame()
 
   return (
     <>
@@ -71,7 +71,7 @@ export default function ShopPage() {
 
               <Button
                 onClick={() => redeemReward(reward)}
-                disabled={!affordable}
+                disabled={!affordable || redeemingRewardId === reward.id}
                 className={cn(
                   'mt-4 h-11 w-full gap-2 font-semibold',
                   affordable

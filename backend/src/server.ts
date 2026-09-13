@@ -4,6 +4,11 @@ import cors from 'cors'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { randomUUID } from 'crypto'
+import authRoutes from './routes/authRoutes.js'
+import questRoutes from './routes/questRoutes.js'
+import rewardRoutes from './routes/rewardRoutes.js'
+import { requireAuth as prismaRequireAuth } from './middleware/auth.js'
+import { prisma } from './config/prisma.js'
 
 const app = express()
 const port = Number(process.env.PORT || 4000)
@@ -60,6 +65,35 @@ const ensureDemoUser = async () => {
 
 app.use(cors({ origin: frontendOrigin, credentials: true }))
 app.use(express.json())
+
+app.use('/api/auth', authRoutes)
+app.use('/api/quests', questRoutes)
+app.use('/api/rewards', rewardRoutes)
+
+app.get('/api/state', prismaRequireAuth, async (req, res) => {
+  try {
+    const [profile, quests] = await Promise.all([
+      prisma.profile.findUnique({ where: { userId: req.user!.id } }),
+      prisma.quest.findMany({ where: { userId: req.user!.id }, orderBy: { createdAt: 'desc' } }),
+    ])
+    if (!profile) return res.status(404).json({ message: 'Profile not found.' })
+    return res.json({
+      player: { level: profile.level, xp: profile.totalXp, xpToNext: profile.totalXp, gold: profile.gold },
+      quests: quests.map((quest: any) => ({
+        id: quest.id,
+        title: quest.title,
+        description: quest.description,
+        category: quest.category.toLowerCase(),
+        difficulty: quest.difficulty.toLowerCase(),
+        xp: quest.xpReward,
+        gold: quest.goldReward,
+        completed: quest.isCompleted,
+      })),
+    })
+  } catch {
+    return res.status(500).json({ message: 'Something went wrong. Please try again.' })
+  }
+})
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'lifequest-api' })

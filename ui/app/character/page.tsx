@@ -2,12 +2,42 @@
 
 import Image from 'next/image'
 import { motion } from 'motion/react'
-import { Coins, Flame, ScrollText, Trophy } from 'lucide-react'
+import {
+  ArrowRight,
+  Check,
+  Coins,
+  Flame,
+  Lock,
+  ScrollText,
+  Sparkles,
+  Trophy,
+} from 'lucide-react'
 import { useGame } from '@/lib/game-context'
 import { PageHeader } from '@/components/page-header'
 import { StatList } from '@/components/stat-list'
 import { XpBar } from '@/components/xp-bar'
 import { AnimatedNumber } from '@/components/animated-number'
+
+const milestones = [
+  {
+    level: 13,
+    rank: 'Legend',
+    cardName: 'Legend',
+    description: 'Consistency turns effort into identity.',
+  },
+  {
+    level: 14,
+    rank: 'Elite',
+    cardName: 'Elite',
+    description: 'Discipline becomes second nature.',
+  },
+  {
+    level: 15,
+    rank: 'Master',
+    cardName: 'Master',
+    description: 'Small actions. Extraordinary results.',
+  },
+]
 
 export default function CharacterPage() {
   const { level, xp, xpToNext, gold, streak, stats, quests, achievements } =
@@ -142,6 +172,158 @@ export default function CharacterPage() {
           </motion.section>
         </div>
       </div>
+
+      <section className="mt-8 pt-2">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <p className="mb-2 text-xs font-semibold tracking-[0.25em] text-primary uppercase">
+              Your Journey
+            </p>
+            <h2 className="font-display text-2xl font-bold tracking-tight">
+              Keep going. There&apos;s more ahead.
+            </h2>
+          </div>
+        </div>
+
+        <div className="relative">
+          <div className="pointer-events-none absolute left-8 right-8 top-7 hidden h-px bg-gradient-to-r from-transparent via-white/15 to-transparent lg:block" />
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {milestones.map((milestone, index) => {
+              const isUnlocked = level >= milestone.level
+              const isNext = level + 1 === milestone.level
+              const isLocked = !isUnlocked && !isNext
+              const accent = isUnlocked
+                ? 'var(--gold)'
+                : isNext
+                  ? 'var(--violet)'
+                  : 'oklch(1 0 0 / 0.3)'
+
+              return (
+                <motion.article
+                  key={milestone.level}
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.08, type: 'spring', stiffness: 260, damping: 26 }}
+                  className={[
+                    'group relative overflow-hidden rounded-[1.75rem] border p-5 transition-all duration-300',
+                    isUnlocked
+                      ? 'border-[var(--gold)]/30 bg-gradient-to-br from-[var(--gold)]/[0.10] via-white/[0.03] to-primary/[0.08]'
+                      : isNext
+                        ? 'border-primary/40 bg-gradient-to-br from-primary/15 via-white/[0.04] to-[var(--gold)]/8 shadow-[0_18px_48px_-24px_var(--violet)]'
+                        : 'border-white/10 bg-white/[0.02]',
+                  ].join(' ')}
+                  style={{
+                    boxShadow: isNext
+                      ? '0 20px 50px -32px oklch(0.68 0.2 300 / 0.5)'
+                      : undefined,
+                  }}
+                >
+                  <div
+                    className="absolute inset-x-5 top-0 h-px opacity-80"
+                    style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }}
+                  />
+
+                  <div className="mb-5 flex items-start justify-between gap-3">
+                    <div
+                      className="grid size-12 place-items-center rounded-2xl border"
+                      style={{
+                        borderColor: `color-mix(in oklch, ${accent} 40%, transparent)`,
+                        background: `color-mix(in oklch, ${accent} 12%, transparent)`,
+                        color: accent,
+                      }}
+                    >
+                      {isUnlocked ? <Check className="size-5" /> : <Lock className="size-4" />}
+                    </div>
+                    <span
+                      className="rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.22em] uppercase"
+                      style={{
+                        borderColor: `color-mix(in oklch, ${accent} 42%, transparent)`,
+                        color: accent,
+                        background: `color-mix(in oklch, ${accent} 8%, transparent)`,
+                      }}
+                    >
+                      {isUnlocked ? 'Unlocked' : isNext ? 'Next' : 'Locked'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-[10px] font-semibold tracking-[0.24em] text-muted-foreground uppercase">
+                        Level {milestone.level}
+                      </p>
+                      <h3 className="mt-3 font-display text-3xl font-bold tracking-tight">
+                        {milestone.rank}
+                      </h3>
+                    </div>
+
+                    {isUnlocked ? (
+                      <div className="rounded-2xl border border-[var(--gold)]/25 bg-[var(--gold)]/[0.06] p-3 text-sm text-[var(--gold)]">
+                        <div className="flex items-center gap-2 font-semibold uppercase tracking-[0.16em]">
+                          <Sparkles className="size-3.5" />
+                          Life Card Unlocked
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-white/10 bg-black/10 p-3 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          <Lock className="size-3.5" />
+                          Unlock at Level {milestone.level}
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      {milestone.description}
+                    </p>
+
+                    <div className="flex items-center justify-between border-t border-white/8 pt-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      <span>{isUnlocked ? 'Reward' : 'Reward:'}</span>
+                      <span style={{ color: accent }}>{milestone.cardName} Life Card</span>
+                    </div>
+
+                    {isUnlocked && (
+                      <button className="mt-2 inline-flex items-center gap-2 rounded-xl border border-[var(--gold)]/25 bg-[var(--gold)]/[0.07] px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">
+                        View Life Card <ArrowRight className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </motion.article>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h3 className="font-display text-lg font-bold">Life Card Collection</h3>
+            <span className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+              {milestones.filter((m) => level >= m.level).length}/{milestones.length} Unlocked
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {milestones.map((milestone) => {
+              const unlocked = level >= milestone.level
+              return (
+                <div
+                  key={milestone.level}
+                  className={[
+                    'flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium',
+                    unlocked
+                      ? 'border-[var(--gold)]/30 bg-[var(--gold)]/[0.08] text-[var(--gold)]'
+                      : 'border-white/10 bg-white/[0.02] text-muted-foreground',
+                  ].join(' ')}
+                >
+                  <span className="text-xs uppercase tracking-[0.18em]">
+                    {unlocked ? '✓' : '🔒'}
+                  </span>
+                  {milestone.cardName}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
     </>
   )
 }

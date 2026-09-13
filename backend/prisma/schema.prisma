@@ -164,7 +164,7 @@ model RewardPurchase {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   reward    Reward   @relation(fields: [rewardId], references: [id], onDelete: Restrict)
 
-  @@unique([userId, rewardId, createdAt])
+  @@unique([userId, rewardId])
 }
 
 model Achievement {

@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma.js'
 import { AppError } from '../utils/errors.js'
 import { getLevelFromXp } from '../utils/level.js'
+import type { Prisma } from '@prisma/client'
 
 const CATEGORY_MAP = {
   study: 'STUDY',
@@ -93,7 +94,7 @@ export async function completeQuest(userId: string, questId: string) {
   const previousLevel = profile.level
   const nextLevel = getLevelFromXp(profile.totalXp + quest.xpReward)
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const completion = await tx.questCompletion.create({
       data: {
         questId: quest.id,

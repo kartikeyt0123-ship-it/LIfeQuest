@@ -56,9 +56,9 @@ type NewQuestInput = {
 }
 
 type ApiState = {
-  player: Player
-  quests: Quest[]
-  habits: Habit[]
+  player?: Player
+  quests?: Quest[]
+  habits?: Habit[]
   levelUp?: LevelUpInfo | null
 }
 
@@ -79,6 +79,7 @@ type GameContextValue = {
   habits: Habit[]
   achievements: Achievement[]
   rewards: Reward[]
+  redeemingRewardId: string | null
   stats: Stat[]
   toasts: Toast[]
   levelUp: LevelUpInfo | null
@@ -109,15 +110,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [habits, setHabits] = useState<Habit[]>(initialHabits)
   const [achievements] = useState<Achievement[]>(initialAchievements)
   const [stats] = useState<Stat[]>(initialStats)
+  const [rewards, setRewards] = useState<Reward[]>(rewardCatalog)
+  const [redeemingRewardId, setRedeemingRewardId] = useState<string | null>(null)
 
   const [toasts, setToasts] = useState<Toast[]>([])
   const [levelUp, setLevelUp] = useState<LevelUpInfo | null>(null)
 
   const applyApiState = useCallback((next: ApiState) => {
-    setPlayer(next.player)
-    setQuests(next.quests)
-    setHabits((previous) =>
-      next.habits.map((habit) => ({
+    if (next.player) setPlayer(next.player)
+    if (next.quests) setQuests(next.quests)
+    if (next.habits) setHabits((previous) =>
+      next.habits!.map((habit) => ({
         ...habit,
         icon: previous.find((item) => item.id === habit.id)?.icon ?? habit.icon,
       })),
@@ -131,10 +134,26 @@ export function GameProvider({ children }: { children: ReactNode }) {
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options?.headers },
     })
     const payload = await response.json()
-    if (!response.ok) throw new Error(payload.error || 'The LifeQuest API is unavailable')
+    if (!response.ok) throw new Error(payload.message || payload.error || 'Something went wrong. Please try again.')
     applyApiState(payload)
     return payload as ApiState
   }, [applyApiState])
+
+  const loadRewards = useCallback(async () => {
+    const token = localStorage.getItem('lifequest-token')
+    const response = await fetch(`${API_BASE}/rewards`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    const payload = await response.json()
+    if (!response.ok) throw new Error(payload.message || 'Something went wrong. Please try again.')
+    const nextRewards = payload.flatMap((reward: { id: string; name: string; description: string; goldCost: number }) => {
+      const catalogReward = rewardCatalog.find((item) => item.name === reward.name)
+      return catalogReward
+        ? [{ ...catalogReward, id: reward.id, description: reward.description, cost: reward.goldCost }]
+        : []
+    })
+    setRewards(nextRewards)
+  }, [])
 
   const dismissToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
@@ -156,14 +175,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password, name }),
     })
     const payload = await response.json()
-    if (!response.ok) throw new Error(payload.error || 'Authentication failed')
+    if (!response.ok) throw new Error(payload.message || payload.error || 'Authentication failed')
     localStorage.setItem('lifequest-token', payload.token)
     localStorage.setItem('lifequest-account', JSON.stringify(payload.user))
     setAccount(payload.user)
-    applyApiState(payload.state)
-  }, [applyApiState])
+    if (payload.state) applyApiState(payload.state)
+    else if (payload.profile) {
+      setPlayer((current) => ({
+        ...current,
+        level: payload.profile.level,
+        xp: payload.profile.totalXp,
+        gold: payload.profile.gold,
+      }))
+    }
+    await loadRewards()
+  }, [applyApiState, loadRewards])
 
-  const signUp = useCallback((email: string, password: string, name?: string) => authenticate('/auth/signup', email, password, name), [authenticate])
+  const signUp = useCallback((email: string, password: string, name?: string) => authenticate('/auth/register', email, password, name), [authenticate])
   const signIn = useCallback((email: string, password: string) => authenticate('/auth/login', email, password), [authenticate])
   const signOut = useCallback(async () => {
     const token = localStorage.getItem('lifequest-token')
@@ -176,11 +204,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem('lifequest-token')
     if (!token) { setAuthLoading(false); return }
-    requestState('/state').then(() => {
+    requestState('/state').then(() => loadRewards()).then(() => {
       const savedAccount = localStorage.getItem('lifequest-account')
       if (savedAccount) setAccount(JSON.parse(savedAccount))
     }).catch(() => localStorage.removeItem('lifequest-token')).finally(() => setAuthLoading(false))
-  }, [requestState])
+  }, [loadRewards, requestState])
 
   const completeQuest = useCallback((id: string) => {
     const quest = quests.find((item) => item.id === id)
@@ -209,11 +237,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
         })
         return
       }
+      if (redeemingRewardId === reward.id) return
+      setRedeemingRewardId(reward.id)
       requestState(`/rewards/${reward.id}/redeem`, { method: 'POST' })
-        .then(() => pushToast({ title: 'Reward Redeemed', description: `Enjoy your ${reward.name}! −${reward.cost} Gold`, tone: 'gold' }))
+        .then((payload) => {
+          const redemption = payload as ApiState & { remainingGold?: number; goldSpent?: number }
+          if (typeof redemption.remainingGold === 'number') {
+            setPlayer((current) => ({ ...current, gold: redemption.remainingGold! }))
+          }
+          pushToast({ title: 'Reward unlocked', description: `${redemption.goldSpent ?? reward.cost} Gold spent`, tone: 'gold' })
+        })
         .catch((error: Error) => pushToast({ title: 'Could not redeem reward', description: error.message, tone: 'error' }))
+        .finally(() => setRedeemingRewardId(null))
     },
-    [player.gold, pushToast, requestState],
+      [player.gold, pushToast, redeemingRewardId, requestState],
   )
 
   const toggleHabitToday = useCallback((id: string) => {
@@ -238,7 +275,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       quests,
       habits,
       achievements,
-      rewards: rewardCatalog,
+      rewards,
+      redeemingRewardId,
       stats,
       toasts,
       levelUp,
@@ -257,6 +295,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       quests,
       habits,
       achievements,
+      rewards,
+      redeemingRewardId,
+      rewards,
       stats,
       toasts,
       levelUp,

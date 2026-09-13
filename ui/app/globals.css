@@ -141,14 +141,31 @@
       0 40px 80px -40px oklch(0 0 0 / 0.8);
   }
   .text-gradient {
+    position: relative;
+    display: inline-block;
+    color: var(--foreground);
+    isolation: isolate;
+    z-index: 0;
+  }
+
+  .text-gradient::before {
+    content: "";
+    position: absolute;
+    inset: 0.03em -0.12em;
+    z-index: -1;
+    border-radius: 0.4em;
     background: linear-gradient(
       100deg,
-      var(--foreground),
-      oklch(0.78 0.12 300)
+      oklch(0.86 0.12 300 / 0.6),
+      oklch(0.82 0.18 300 / 0.35)
     );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    box-shadow: 0 0 0 1px oklch(0.86 0.12 300 / 0.2);
+    opacity: 0.9;
+  }
+
+  .text-gradient {
+    position: relative;
+    z-index: 1;
   }
 }
 
